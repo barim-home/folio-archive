@@ -1,0 +1,31 @@
+{
+  "id": "yeongu",
+  "order": 1,
+  "published": true,
+  "name": "영우",
+  "hanja": "影偶",
+  "roman": "YEONGU",
+  "realName": "유경안 (劉景晏)",
+  "world": "연운 · Where Winds Meet",
+  "age": "28세",
+  "affiliation": "구류문",
+  "role": "무인",
+  "summary": "밤의 그림자 속에서 다른 얼굴을 꺼내 드는 사람.",
+  "blurb": "낮에는 조용한 무인. 밤이 되면 가면 아래 다른 목소리가 깨어난다.",
+  "status": "complete",
+  "tags": [
+    "구류문",
+    "가면",
+    "피영극"
+  ],
+  "art": "",
+  "gallery": [],
+  "bgm": "/assets/audio/yeongu-demo.mp3",
+  "trackTitle": "葛东琪 · 囍",
+  "trackType": "YOUTUBE · 영우",
+  "publicStory": "글씨를 능숙하게 다루는 무인. 낮에는 말수가 적고 홀로 무기를 손질하거나 수련한다. 피영극을 좋아하며, 공연이 끝난 자리에도 오래 남아 있곤 한다.",
+  "spoilerStory": "",
+  "quote": "길상, 길상. 하하! 이런 길상도 없지!",
+  "relatedIds": [],
+  "youtubeUrl": "https://youtu.be/AMEv4ncoQxg?si=mKczIvlTnd7AUdZk"
+}

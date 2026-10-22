@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="FOLIO — 작은 세계에 남겨진 인물들의 기록. 개인 창작 캐릭터 아카이브." />
+  <meta name="theme-color" content="#f7f7f3" />
+  <title>FOLIO — Character Archive</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script defer src="generated.js"></script>
+  <script defer src="editor.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 이동</a>
+  <div class="site-shell">
+    <header class="site-header">
+      <a href="#/" class="brand" aria-label="FOLIO 홈으로"><span class="brand-symbol">◉</span><span>FOLIO<span class="brand-stop">.</span></span></a>
+      <nav aria-label="메인 메뉴" class="main-nav">
+        <a data-nav="home" href="#/">Home</a>
+        <a data-nav="relations" href="#/relations">Relations</a>
+        <a data-nav="about" href="#/about">About</a>
+        <a class="edit-nav-link" data-nav="edit" href="#/edit">✎ EDIT</a>
+      </nav>
+      <div class="header-right">
+        <a class="mobile-edit-link" href="#/edit" title="브라우저에서 편집">EDIT</a>
+        <div class="character-menu" id="character-menu">
+          <button class="character-menu-toggle" id="character-menu-toggle" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="character-menu-panel">
+            <span class="menu-button-index">INDEX /</span><span>캐릭터 목록</span><span class="menu-button-count" id="menu-count">03</span><span class="menu-chevron" aria-hidden="true">⌄</span>
+          </button>
+          <div class="character-menu-panel" id="character-menu-panel" hidden>
+            <div class="menu-panel-heading"><div><span class="menu-eyebrow">FOLIO / CHARACTER DIRECTORY</span><strong>캐릭터 목록</strong></div><span class="menu-panel-count" id="menu-panel-count">03 ENTRIES</span></div>
+            <label class="menu-search"><span class="sr-only">캐릭터 이름 검색</span><input type="search" id="menu-search-input" placeholder="이름 또는 키워드 검색" autocomplete="off"><span aria-hidden="true">⌕</span></label>
+            <div id="character-menu-list" class="character-menu-list" aria-live="polite"></div>
+            <nav class="menu-page-links" aria-label="모바일 페이지 이동"><a href="#/">Home</a><a href="#/relations">Relations</a><a href="#/about">About</a></nav>
+            <div class="menu-panel-footer"><span>IMAGE CLICK → PLAY CHARACTER THEME</span><span>VOL. 01</span></div>
+          </div>
+        </div>
+        <button class="theme-button" id="theme-toggle" aria-label="어두운 화면으로 전환" title="화면 테마 전환"><span aria-hidden="true">◐</span></button>
+      </div>
+    </header>
+    <main id="main" tabindex="-1" aria-live="polite"></main>
+    <footer class="site-footer"><span>© <span id="year">2026</span> <span id="footer-credit">FOLIO. AN ORIGINAL CHARACTER ARCHIVE.</span></span><span>MADE FOR STORIES WORTH KEEPING <span class="footer-star">✳</span></span></footer>
+  </div>
+  <!-- 캐릭터 간 이동해도 음악은 계속 재생됩니다. 이미지 클릭 시 첫 재생이 시작됩니다. -->
+  <audio id="folio-audio" loop preload="none"></audio>
+  <aside class="music-dock" id="music-dock" hidden aria-label="캐릭터 테마곡 플레이어">
+    <div class="music-album" aria-hidden="true"><span>♫</span><i class="music-pulse"></i></div>
+    <div class="music-details"><strong id="music-title">CHARACTER THEME</strong><small id="music-info">BGM</small><span id="music-status" class="music-status" role="status">재생 대기</span></div>
+    <button id="music-toggle" class="music-round-button" aria-label="음악 재생" title="재생 / 일시정지">▶</button>
+    <button id="music-mute" class="music-quiet-button" aria-label="음소거" title="음소거 전환">♫</button>
+    <label class="music-volume-label"><span class="sr-only">배경음악 음량</span><input id="music-volume" type="range" min="0" max="1" step="0.05" value="0.55" aria-label="배경음악 음량"></label>
+    <button id="music-stop" class="music-close-button" aria-label="음악 종료 및 플레이어 닫기" title="음악 종료">×</button>
+  </aside>
+</body>
+</html>

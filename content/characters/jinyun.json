@@ -1,0 +1,33 @@
+{
+  "id": "jinyun",
+  "order": 2,
+  "published": true,
+  "name": "주진윤",
+  "hanja": "",
+  "roman": "JU JINYUN",
+  "realName": "",
+  "world": "연운 · Where Winds Meet",
+  "age": "미정",
+  "affiliation": "미정",
+  "role": "인물 설정 정리 중",
+  "summary": "말보다 시선에 더 많은 이야기를 남기는 사람.",
+  "blurb": "첫인상만으로 모두를 설명할 수 없는 인물.",
+  "status": "draft",
+  "tags": [
+    "인물",
+    "서사 정리 중"
+  ],
+  "art": "/assets/images/jinyun.jpg",
+  "gallery": [
+    "/assets/images/jinyun.jpg"
+  ],
+  "bgm": "/assets/audio/jinyun-demo.mp3",
+  "trackTitle": "여백 · Still Air",
+  "trackType": "ORIGINAL DEMO · 주진윤",
+  "publicStory": "상세 성격과 배경 서사는 정리 중입니다. 이미지와 이름은 임시 아카이브 샘플로 배치했습니다.",
+  "spoilerStory": "",
+  "quote": "",
+  "relatedIds": [
+    "poyeong"
+  ]
+}

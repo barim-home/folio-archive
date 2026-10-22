@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FOLIO · YouTube 재생 테스트</title><style>
+:root{color-scheme:light}*{box-sizing:border-box}body{margin:0;background:#f8f7f3;color:#282924;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}main{max-width:760px;margin:7vh auto;padding:28px}h1{font-size:clamp(27px,5vw,48px);font-weight:650;letter-spacing:-.05em;margin:.3em 0}.over{font-size:11px;letter-spacing:.23em;color:#888}p{line-height:1.8}#player{width:200px;height:200px;min-width:200px;min-height:200px;display:block;border:0;background:#171717;margin:24px 0}button,a.action{border:1px solid #3e4039;color:#292c26;background:transparent;text-decoration:none;display:inline-block;padding:12px 18px;border-radius:2px;cursor:pointer;font-size:14px;margin:0 8px 8px 0}button.primary{background:#242922;color:white}small{color:#6f726e;line-height:1.7;display:block}.panel{background:#eeede7;padding:18px;margin:20px 0}.pill{font-size:12px}.links{display:flex;gap:6px;flex-wrap:wrap}hr{border:0;border-top:1px solid #ddd;margin:32px 0}</style></head>
+<body><main><p class="over">FOLIO / VIDEO DIAGNOSTICS</p><h1>영우 · 유튜브 테마곡</h1><p>업로드된 홈페이지에서 아래 플레이어가 표시되고 재생되는지 확인하세요. 200×200 크기의 유튜브 공식 플레이어입니다.</p>
+<div class="panel"><b>접속 환경</b><div id="origin" class="pill"></div><small id="note"></small></div>
+<iframe id="player" width="200" height="200" title="영우 · 葛东琪 囍" src="https://www.youtube.com/embed/AMEv4ncoQxg?playsinline=1&controls=1&rel=0" loading="eager" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+<div class="links"><button class="primary" id="start" type="button">▶ 자동재생 요청 다시 하기</button><button type="button" id="reload">↻ 플레이어 새로고침</button><a class="action" href="https://www.youtube.com/watch?v=AMEv4ncoQxg" rel="noopener noreferrer" target="_blank">유튜브에서 듣기 ↗</a></div>
+<p><small>플레이어가 보이지만 소리가 나오지 않으면 영상의 ▶ 버튼을 직접 눌러보세요. 브라우저가 소리 있는 자동재생을 제한할 수 있습니다. 영상 소유자가 외부 삽입을 금지한 경우에도 재생되지 않을 수 있습니다.</small></p><hr><a class="action" href="./#/character/yeongu">← 영우 프로필로 돌아가기</a>
+</main><script>
+const player=document.getElementById('player');document.getElementById('origin').textContent=location.origin==='null'?'파일 미리보기 (file://)':location.origin;
+document.getElementById('note').textContent=location.protocol==='file:'?'다운로드한 파일은 YouTube 오류 153이 발생할 수 있습니다. GitHub Pages의 HTTPS 주소에서 테스트하세요.':'HTTPS 게시 페이지라면 Referer 전송 환경을 갖추게 됩니다. 단, 영상의 실제 재생 성공은 별도로 확인해야 합니다.';
+document.getElementById('start').addEventListener('click',()=>{player.src='https://www.youtube.com/embed/AMEv4ncoQxg?autoplay=1&playsinline=1&controls=1&rel=0';});
+document.getElementById('reload').addEventListener('click',()=>{player.src='https://www.youtube.com/embed/AMEv4ncoQxg?playsinline=1&controls=1&rel=0';});
+</script></body></html>

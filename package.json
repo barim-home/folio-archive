@@ -1,0 +1,11 @@
+{
+  "name": "folio-character-archive",
+  "private": true,
+  "version": "6.0.0",
+  "description": "Character archive: browser draft editor plus Pages CMS publishing",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node --check app.js && node --check editor.js && node --check scripts/build.mjs && node scripts/build.mjs"
+  }
+}
