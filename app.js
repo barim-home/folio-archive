@@ -43,36 +43,130 @@ function youTubeVideoId(value='') {
 function hasYouTube(char){return !!(char&&youTubeVideoId(char.youtubeUrl))}
 function youtubeEmbedUrl(id){
   return 'https://www.youtube.com/embed/'+encodeURIComponent(id)
-    +'?autoplay=1&playsinline=1&controls=1&rel=0&loop=1&playlist='+encodeURIComponent(id);
+    +'?autoplay=1&playsinline=1&controls=1&enablejsapi=1&rel=0&loop=1&playlist='+encodeURIComponent(id)
+    +(location.protocol==='https:'?'&origin='+encodeURIComponent(location.origin):'');
 }
+// V7.2: the YouTube iframe lives OUTSIDE #main. This function only allocates
+// a visual slot beside the character's name; route changes never remove audio.
 function youtubeProfilePlayer(char){
   const id=youTubeVideoId(char.youtubeUrl);
   if(!id)return '';
+  return `<div class="profile-youtube youtube-slot" data-youtube-slot="${escapeHtml(id)}" aria-label="${escapeHtml(char.name)}의 테마곡 플레이어 위치"><span class="sr-only">캐릭터 이름 옆 테마곡 플레이어</span></div>`;
+}
+const permanentYouTube=document.getElementById('persistent-youtube');
+let activeYTPlayer=null;
+let activeYTVideoId='';
+let ytPositionRequested=false;
+function setYouTubeMessage(message){
+  const el=document.getElementById('youtube-play-status');
+  if(el)el.textContent=message;
+}
+function youtubePlayerMarkup(char,id){
   const url='https://www.youtube.com/watch?v='+encodeURIComponent(id);
-  // A downloaded HTML file and the ChatGPT preview cannot reliably supply the
-  // HTTP Referer YouTube requires. Display an honest 200x200 link preview there,
-  // instead of a broken iframe / error 153. The published website uses the
-  // original, official iframe with a proper HTTPS origin.
-  if(window.FOLIO_PREVIEW_MODE === true || location.protocol === 'file:') {
-    return `<div class="profile-youtube" aria-label="${escapeHtml(char.name)}의 유튜브 테마곡"><div class="yt-caption"><span class="yt-caption-icon">▶</span> CHARACTER OST</div><a class="yt-player yt-preview-placeholder" href="${url}" target="_blank" rel="noopener noreferrer" title="YouTube에서 곡 듣기"><span class="yt-preview-play">▶</span><strong>YouTube 테마곡</strong><small>미리보기에서는 재생 제한 · 클릭하면 YouTube로 이동</small></a><span class="yt-track-name">${escapeHtml(char.trackTitle||'YouTube 테마곡')}</span><p class="yt-note">게시된 GitHub Pages 사이트에서는 이 자리에 200×200 영상이 표시됩니다.</p><a class="yt-open" href="${url}" target="_blank" rel="noopener noreferrer">YouTube에서 열기 ↗</a></div>`;
+  const preview=window.FOLIO_PREVIEW_MODE===true || location.protocol==='file:';
+  const play=preview
+    ? `<a class="yt-player yt-preview-placeholder" href="${url}" target="_blank" rel="noopener noreferrer" title="YouTube에서 듣기"><span class="yt-preview-play">▶</span><strong>YouTube 테마곡</strong><small>로컬 미리보기에서는 YouTube로 연결돼요</small></a>`
+    : `<iframe id="profile-youtube-player" class="yt-player" width="200" height="200" src="${youtubeEmbedUrl(id)}" title="${escapeHtml(char.name)} · ${escapeHtml(char.trackTitle||'유튜브 테마곡')}" loading="eager" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
+  return `<div class="profile-youtube" aria-label="${escapeHtml(char.name)}의 유튜브 테마곡"><div class="yt-caption"><span class="yt-caption-icon">▶</span> CHARACTER OST <span class="yt-continuous">연속 재생</span></div>${play}<span class="yt-track-name">${escapeHtml(char.trackTitle||'YouTube 테마곡')}</span><p id="youtube-play-status" class="yt-note" role="status">${preview?'웹에 게시한 버전에서 재생 상태를 확인할 수 있어요.':'메인과 비밀 기록에서 같은 음악이 이어집니다.'}</p><button type="button" id="youtube-play-retry" class="yt-retry" aria-label="유튜브 음악 재생">▶ 음악 재생</button><a class="yt-open" href="${url}" target="_blank" rel="noopener noreferrer">YouTube에서 열기 ↗</a></div>`;
+}
+function initializeYouTubePlayer(){
+  const iframe=document.getElementById('profile-youtube-player');
+  if(!iframe || window.FOLIO_PREVIEW_MODE===true || location.protocol==='file:')return;
+  const attachingFor=activeYTVideoId;
+  const attach=()=>{
+    if(!iframe.isConnected || activeYTVideoId!==attachingFor || !window.YT?.Player || activeYTPlayer)return;
+    try{
+      activeYTPlayer=new YT.Player(iframe,{
+        events:{
+          onReady:e=>{try{e.target.playVideo()}catch(_e){}},
+          onStateChange:e=>{
+            if(e.data===YT.PlayerState.PLAYING)setYouTubeMessage('♫ 재생 중 · 화면을 이동해도 이어집니다.');
+            if(e.data===YT.PlayerState.PAUSED)setYouTubeMessage('일시정지 · ▶ 버튼으로 이어서 재생할 수 있어요.');
+          },
+          onAutoplayBlocked:()=>setYouTubeMessage('모바일 자동재생 제한: 영상 안의 ▶를 한 번 눌러주세요.'),
+          onError:()=>setYouTubeMessage('이 영상은 외부 재생이 제한될 수 있어요. YouTube에서 열기를 이용해 주세요.')
+        }
+      });
+    }catch(e){setYouTubeMessage('플레이어 오류: 영상 안의 ▶를 눌러주세요.');}
+  };
+  if(window.YT?.Player){attach();return;}
+  const previous=window.onYouTubeIframeAPIReady;
+  window.onYouTubeIframeAPIReady=()=>{if(typeof previous==='function')previous();attach();};
+  if(!document.querySelector('script[data-folio-yt-api]')){
+    const script=document.createElement('script');
+    script.src='https://www.youtube.com/iframe_api';
+    script.async=true;
+    script.dataset.folioYtApi='true';
+    document.head.appendChild(script);
   }
-  return `<div class="profile-youtube" aria-label="${escapeHtml(char.name)}의 유튜브 테마곡"><div class="yt-caption"><span class="yt-caption-icon">▶</span> CHARACTER OST</div><iframe id="profile-youtube-player" class="yt-player" width="200" height="200" src="${youtubeEmbedUrl(id)}" title="${escapeHtml(char.name)} · ${escapeHtml(char.trackTitle||'유튜브 테마곡')}" loading="eager" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe><span class="yt-track-name">${escapeHtml(char.trackTitle||'YouTube 테마곡')}</span><p class="yt-note">자동재생이 막히면 영상의 ▶를 눌러주세요.</p><a class="yt-open" href="${url}" target="_blank" rel="noopener noreferrer">YouTube에서 열기 ↗</a></div>`;
+}
+function clearYouTubePlayer(){
+  if(activeYTPlayer){try{activeYTPlayer.destroy()}catch(e){}activeYTPlayer=null;}
+  activeYTVideoId='';
+  permanentYouTube.replaceChildren();
+  permanentYouTube.hidden=true;
+  permanentYouTube.classList.remove('yt-docked');
+}
+function positionPersistentYouTube(){
+  if(permanentYouTube.hidden)return;
+  const slot=document.querySelector('[data-youtube-slot]');
+  if(slot && slot.dataset.youtubeSlot===activeYTVideoId){
+    permanentYouTube.classList.remove('yt-docked');
+    const r=slot.getBoundingClientRect();
+    permanentYouTube.style.left=(r.left+window.scrollX)+'px';
+    permanentYouTube.style.top=(r.top+window.scrollY)+'px';
+  }else{
+    // Always show the official, at-least-200x200 player rather than silently
+    // leaving an invisible YouTube iframe on other archive pages.
+    permanentYouTube.classList.add('yt-docked');
+    permanentYouTube.style.left='';
+    permanentYouTube.style.top='';
+  }
+}
+function requestYouTubePosition(){
+  if(ytPositionRequested)return;
+  ytPositionRequested=true;
+  requestAnimationFrame(()=>{ytPositionRequested=false;positionPersistentYouTube();});
+}
+window.addEventListener('resize',requestYouTubePosition);
+window.addEventListener('scroll',requestYouTubePosition,{passive:true});
+function keepYouTubePlayingFor(char){
+  const id=youTubeVideoId(char?.youtubeUrl);
+  if(!id)return;
+  // CRITICAL: do not change src, destroy, or recreate iframe if same video.
+  if(id!==activeYTVideoId){
+    clearYouTubePlayer();
+    activeYTVideoId=id;
+    permanentYouTube.innerHTML=youtubePlayerMarkup(char,id);
+    permanentYouTube.hidden=false;
+    initializeYouTubePlayer();
+  }
+  positionPersistentYouTube();
 }
 function replayProfileYouTube(){
-  const iframe=document.getElementById('profile-youtube-player');
-  if(iframe)iframe.src=iframe.src;
-  // In offline preview mode, intentionally do not try to load an iframe.
+  if(!activeYTVideoId)return;
+  setYouTubeMessage('♫ 재생 요청 중…');
+  try{
+    if(activeYTPlayer && typeof activeYTPlayer.playVideo==='function')activeYTPlayer.playVideo();
+    else setYouTubeMessage('▶ 영상 재생 버튼을 눌러주세요. 시작 후에는 페이지 이동 중에도 이어집니다.');
+  }catch(e){setYouTubeMessage('영상 안의 ▶를 눌러주세요.');}
 }
+permanentYouTube.addEventListener('click',e=>{
+  if(e.target.closest('#youtube-play-retry'))replayProfileYouTube();
+});
 const iconArrow='↗';
 function artwork(char, large=false){
   if(char.art) return `<img src="${escapeHtml(char.art)}" alt="${escapeHtml(char.name)} 캐릭터 일러스트" loading="${large?'eager':'lazy'}">`;
   return `<div class="symbol-visual" role="img" aria-label="${escapeHtml(char.name)}를 상징하는 글자 타이포그래피"><span class="hanzi">${escapeHtml((char.hanja||char.name).slice(0,1))}</span><span class="roman">${escapeHtml((char.roman||char.name).split('').join(' '))}</span><span class="decor-text">CHARACTER ARCHIVE · NO. ${char.number}</span></div>`;
 }
-function card(char){return `<article class="char-card"><a href="#/character/${encodeURIComponent(char.id)}" data-music-card="${char.id}" aria-label="${escapeHtml(char.name)} 프로필 열기. 이미지 선택 시 테마곡 재생"><div class="card-visual" data-track-trigger="${char.id}">${artwork(char)}<span class="card-number">NO. ${char.number}</span><span class="music-card-label" aria-hidden="true">♫ &nbsp; IMAGE · PLAY BGM</span><span class="card-open" aria-hidden="true">${iconArrow}</span></div><div class="card-copy"><div class="card-meta"><span>WHERE WINDS MEET</span><span>${char.status==='complete'?'PROFILE READY':'IN PROGRESS'}</span></div><div class="card-title-row"><h3>${escapeHtml(char.name)}</h3><em>${escapeHtml(char.roman)}</em></div><p class="card-desc">${escapeHtml(char.summary)}</p></div></a></article>`}
+function card(char){return `<article class="char-card"><a href="#/character/${encodeURIComponent(char.id)}" data-music-card="${char.id}" aria-label="${escapeHtml(char.name)} 프로필 열기. 인물 선택 시 테마곡 재생 시도"><div class="card-visual" data-track-trigger="${char.id}">${artwork(char)}<span class="card-number">NO. ${char.number}</span><span class="music-card-label" aria-hidden="true">♫ &nbsp; IMAGE · PLAY BGM</span><span class="card-open" aria-hidden="true">${iconArrow}</span></div><div class="card-copy"><div class="card-meta"><span>WHERE WINDS MEET</span><span>${char.status==='complete'?'PROFILE READY':'IN PROGRESS'}</span></div><div class="card-title-row"><h3>${escapeHtml(char.name)}</h3><em>${escapeHtml(char.roman)}</em></div><p class="card-desc">${escapeHtml(char.summary)}</p></div></a></article>`}
 function home(){
   const featured=getFeatured();
   const worlds=new Set(characters.map(c=>c.world).filter(Boolean));
-  const feature=featured?`<section class="featured-record" aria-label="대표 캐릭터"><div class="featured-copy"><span class="section-label">On the cover / No. ${featured.number}</span><div class="feature-rule"></div><span class="feature-label">FEATURED PERSON · VOL.01</span><h2>기록의 첫 장,<br><span>${escapeHtml(featured.name)}</span></h2><p>${escapeHtml(featured.summary||'')}<br>${escapeHtml(featured.blurb||'')}</p><a class="feature-link" href="#/character/${encodeURIComponent(featured.id)}">프로필 열어보기 <span aria-hidden="true">↗</span></a><div class="feature-foot"><span>${escapeHtml(featured.roman||featured.name)}</span><span>ARCHIVED / ${featured.number}</span></div></div><button type="button" class="featured-art" data-track-trigger="${featured.id}" data-track-go="${featured.id}" aria-label="${escapeHtml(featured.name)} 이미지: 테마곡 재생하고 프로필 열기">${artwork(featured,true)}<span class="feature-play">♫ &nbsp; 이미지 클릭 · 테마곡 재생</span></button></section>`:'';
+  // The public main page also displays the official 200x200 OST player.
+  // This is deliberately visible and playable in YouTube's own controls.
+  const homeSound=featured&&hasYouTube(featured)?youtubeProfilePlayer(featured):'';
+  const feature=featured?`<section class="featured-record" aria-label="대표 캐릭터"><div class="featured-copy"><span class="section-label">On the cover / No. ${featured.number}</span><div class="feature-rule"></div><span class="feature-label">FEATURED PERSON · VOL.01</span><div class="featured-name-with-music"><h2>기록의 첫 장,<br><span>${escapeHtml(featured.name)}</span></h2>${homeSound}</div><p>${escapeHtml(featured.summary||'')}<br>${escapeHtml(featured.blurb||'')}</p>${homeSound?'<button type="button" class="home-bgm-retry" data-youtube-retry>♫ 메인 음악 재생하기 ↗</button>':''}<a class="feature-link" href="#/character/${encodeURIComponent(featured.id)}">프로필 열어보기 <span aria-hidden="true">↗</span></a><div class="feature-foot"><span>${escapeHtml(featured.roman||featured.name)}</span><span>ARCHIVED / ${featured.number}</span></div></div><button type="button" class="featured-art" data-track-trigger="${featured.id}" data-track-go="${featured.id}" aria-label="${escapeHtml(featured.name)} 이미지: 테마곡 재생하고 프로필 열기">${artwork(featured,true)}<span class="feature-play">♫ &nbsp; 프로필 열기 · 테마곡 재생 시도</span></button></section>`:'';
   app.innerHTML=`<section class="intro" aria-labelledby="home-title"><div><span class="section-label">${escapeHtml(siteSettings.introEyebrow||'A curated collection of fictional lives')}</span><h1 id="home-title">${escapeHtml(siteSettings.introTitle||'이름 너머의')}<br><span class="outline-word">${escapeHtml(siteSettings.introAccent||'이야기를 모으다.')}</span></h1><p>${plainLines(siteSettings.introText||'서로 다른 삶, 저마다의 기록.\n작은 세계에 남겨진 인물들을 한 장씩 펼쳐 봅니다.')}</p></div><aside class="intro-aside" aria-label="아카이브 통계"><div class="vertical-index">THE ARCHIVE / VOL. 01</div><div class="aside-small"><span>CHARACTERS</span><span>${countText}</span></div><div class="aside-small"><span>UNIVERSES</span><span>${String(worlds.size).padStart(2,'0')}</span></div><div class="aside-small"><span>COLLECTION</span><span>ONGOING</span></div></aside></section>
   ${feature}
   <section class="archive-guidance"><div><span class="section-label">How to explore</span><p>각 인물의 기록은 오른쪽 위 <strong>캐릭터 목록</strong>에서 선택할 수 있어요.</p></div><button class="open-directory" id="open-directory-home" type="button">캐릭터 목록 펼치기 <span aria-hidden="true">↗</span></button></section>
@@ -101,10 +195,11 @@ function updateProfilePanel(char){const el=document.getElementById('profile-tab-
 }
 function profile(id){const char=characters.find(c=>c.id===id);if(!char){notFound();return}
  currentTab='profile';showSpoiler=false;
- app.innerHTML=`<div class="page-top"><div class="crumb"><a href="#/">CHARACTER INDEX</a>　/　<b>NO. ${char.number}</b></div></div><article class="profile-hero"><button type="button" class="profile-art profile-music-image" data-track-trigger="${char.id}" data-track-toggle="true" aria-label="${escapeHtml(char.name)} 이미지: ${hasYouTube(char)?'유튜브 음악 재생 다시 시도':'테마곡 재생 또는 일시정지'}">${artwork(char,true)}<span class="profile-music-label" aria-hidden="true"><span>♫</span><span>${hasYouTube(char)?'CLICK TO RETRY YOUTUBE THEME':'CLICK TO PLAY / PAUSE BGM'}</span></span></button><div class="profile-copy"><div class="small-no">CHARACTER FILE — ${char.number} / ${countText}</div><div class="profile-name-with-music"><div class="profile-name-block"><h1>${escapeHtml(char.name)}</h1><div class="hanja">${escapeHtml(char.hanja||char.roman)}</div></div>${youtubeProfilePlayer(char)}</div><p class="profile-blurb">${escapeHtml(char.blurb)}</p><dl class="profile-specs"><div><dt>세계관</dt><dd>${escapeHtml(char.world)}</dd></div><div><dt>나이</dt><dd>${escapeHtml(char.age)}</dd></div><div><dt>소속</dt><dd>${escapeHtml(char.affiliation)}</dd></div><div><dt>분류</dt><dd>${escapeHtml(char.role)}</dd></div>${char.realName?`<div><dt>다른 이름</dt><dd>${escapeHtml(char.realName)}</dd></div>`:''}</dl></div></article>
+ app.innerHTML=`<div class="page-top"><div class="crumb"><a href="#/">CHARACTER INDEX</a>　/　<b>NO. ${char.number}</b></div></div><article class="profile-hero"><button type="button" class="profile-art profile-music-image" data-track-trigger="${char.id}" data-track-toggle="true" aria-label="${escapeHtml(char.name)} 이미지: ${hasYouTube(char)?'유튜브 음악 재생 다시 시도':'테마곡 재생 또는 일시정지'}">${artwork(char,true)}<span class="profile-music-label" aria-hidden="true"><span>♫</span><span>${hasYouTube(char)?'음악이 안 들리면 누르기':'CLICK TO PLAY / PAUSE BGM'}</span></span></button><div class="profile-copy"><div class="small-no">CHARACTER FILE — ${char.number} / ${countText}</div><div class="profile-name-with-music"><div class="profile-name-block"><h1>${escapeHtml(char.name)}</h1><div class="hanja">${escapeHtml(char.hanja||char.roman)}</div></div>${youtubeProfilePlayer(char)}</div><p class="profile-blurb">${escapeHtml(char.blurb)}</p><dl class="profile-specs"><div><dt>세계관</dt><dd>${escapeHtml(char.world)}</dd></div><div><dt>나이</dt><dd>${escapeHtml(char.age)}</dd></div><div><dt>소속</dt><dd>${escapeHtml(char.affiliation)}</dd></div><div><dt>분류</dt><dd>${escapeHtml(char.role)}</dd></div>${char.realName?`<div><dt>다른 이름</dt><dd>${escapeHtml(char.realName)}</dd></div>`:''}</dl></div></article>
  <section class="profile-bottom"><div class="tablist" role="tablist" aria-label="프로필 상세 정보"><button role="tab" data-tab="profile" aria-selected="true">Profile</button><button role="tab" data-tab="story" aria-selected="false">Story & Secrets</button><button role="tab" data-tab="connections" aria-selected="false">Relations</button><button role="tab" data-tab="gallery" aria-selected="false">Gallery</button></div><div class="tab-panel" id="profile-tab-panel" role="tabpanel"></div><a href="#/" class="back-link">← 캐릭터 목록으로 돌아가기</a></section>`;
  document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>{currentTab=button.dataset.tab;updateProfilePanel(char)}));
  updateProfilePanel(char);
+ requestYouTubePosition();
 }
 function relations(){
  const pairs=[];const seen=new Set();
@@ -115,8 +210,54 @@ function relations(){
 }
 function about(){app.innerHTML=`<section class="page-heading"><span class="section-label">A note from the archive</span><h1>${escapeHtml(siteSettings.aboutTitle||'FOLIO에 대하여.')}</h1><p>이름을 붙이고, 기록하고, 다시 펼쳐 보는 작은 서가.</p></section><div class="about-content"><p>${plainLines(siteSettings.aboutText||'창작 캐릭터의 기본 정보와 서사, 관계, 일러스트를 한곳에 모으는 개인 아카이브입니다.')}</p><dl class="about-specs"><dt>ARCHIVE</dt><dd>${escapeHtml(siteSettings.siteTitle||'FOLIO — Character Archive')}</dd><dt>CHARACTERS</dt><dd>${countText}</dd><dt>FORMAT</dt><dd>인물 도감 / 관계 기록 / 이미지와 음악</dd><dt>STATUS</dt><dd>ONGOING</dd></dl></div>`}
 function notFound(){app.innerHTML=`<section class="page-heading"><h1>페이지를 찾을 수 없어요.</h1><p>주소를 다시 확인하거나 목록으로 돌아가 주세요.</p><a href="#/" class="back-link">← 캐릭터 목록으로</a></section>`}
-function route(){closeCharacterMenu();const path=decodeURIComponent(location.hash.replace(/^#/,''))||'/';document.querySelectorAll('[data-nav]').forEach(link=>link.classList.toggle('active',link.getAttribute('href')==='#'+(path.startsWith('/character/')?'/':path)));if(path==='/')home();else if(path.startsWith('/character/'))profile(path.split('/')[2]);else if(path==='/relations')relations();else if(path==='/about')about();else if(path==='/edit' && window.FOLIO_EDITOR)window.FOLIO_EDITOR.render(app);else notFound();if(path.startsWith('/character/')){const selected=characters.find(c=>c.id===path.split('/')[2]);if(hasYouTube(selected))stopMusic();}window.scrollTo({top:0,behavior:'instant'});}
+function route(){
+  closeCharacterMenu();
+  const path=decodeURIComponent(location.hash.replace(/^#/,''))||'/';
+  document.querySelectorAll('[data-nav]').forEach(link=>link.classList.toggle('active',link.getAttribute('href')==='#'+(path.startsWith('/character/')?'/':path)));
+  if(path==='/')home();
+  else if(path.startsWith('/character/'))profile(path.split('/')[2]);
+  else if(path==='/relations')relations();
+  else if(path==='/about')about();
+  else if(path==='/edit' && window.FOLIO_EDITOR)window.FOLIO_EDITOR.render(app);
+  else notFound();
+  const selected=path==='/'?getFeatured():(path.startsWith('/character/')?characters.find(c=>c.id===path.split('/')[2]):null);
+  if(hasYouTube(selected)){
+    if(currentMusicId)stopMusic();
+    keepYouTubePlayingFor(selected);
+  }else if(selected){
+    // Moving to a different character with another soundtrack switches music.
+    clearYouTubePlayer();
+  }else{
+    // Relations/About/Edit: retain previous soundtrack in visible 200x200 dock.
+    positionPersistentYouTube();
+  }
+  window.scrollTo({top:0,behavior:'instant'});
+  requestYouTubePosition();
+}
 window.addEventListener('hashchange',route);
+// Crucial for mobile: route synchronously in the character-selection tap.
+// The older version only rendered after the asynchronous hashchange event.
+function navigateToCharacter(id){
+  const next=`#/character/${encodeURIComponent(id)}`;
+  if(location.hash!==next){
+    history.pushState(null,'',next); // Does not fire hashchange; prevents a double iframe reload.
+    route();                    // Create the visible 200x200 YouTube embed in this same tap.
+  }else if(hasYouTube(characters.find(c=>c.id===id))){
+    replayProfileYouTube();
+  }
+  const char=characters.find(c=>c.id===id);
+  if(char && !hasYouTube(char))playCharacterMusic(id,false);
+}
+// All character links (name, relations, featured text) now make the same one-tap
+// attempt. Respect Ctrl/Cmd-click, modified clicks and opening a new tab.
+document.addEventListener('click',e=>{
+  const link=e.target.closest('a[href^="#/character/"]');
+  if(!link || e.defaultPrevented || e.button!==0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)return;
+  const id=decodeURIComponent(link.getAttribute('href').slice('#/character/'.length));
+  if(!characters.some(c=>c.id===id))return;
+  e.preventDefault();
+  navigateToCharacter(id);
+},true);
 const themeButton=document.getElementById('theme-toggle');
 try{const saved=localStorage.getItem('folio-theme');if(saved==='dark')document.documentElement.dataset.theme='dark'}catch(e){}
 function updateThemeLabel(){themeButton.setAttribute('aria-label',document.documentElement.dataset.theme==='dark'?'밝은 화면으로 전환':'어두운 화면으로 전환')}
@@ -155,8 +296,7 @@ menuPanel.addEventListener('click',e=>{
   const musicImage=e.target.closest('[data-menu-music]');
   if(musicImage){
     const id=musicImage.dataset.menuMusic;
-    playCharacterMusic(id,false);
-    location.hash=`#/character/${id}`;
+    navigateToCharacter(id);
     closeCharacterMenu();
     return;
   }
@@ -210,6 +350,7 @@ function playCharacterMusic(id,toggle=false){
     return;
   }
   if(!char.bgm)return;
+  if(activeYTVideoId)clearYouTubePlayer();
   const same=currentMusicId===char.id;
   if(same && toggle && !musicAudio.paused){musicAudio.pause();return;}
   if(!same){
@@ -237,10 +378,14 @@ function stopMusic(){
 }
 // 메인 목록 이미지, 상세 대표 이미지, 갤러리 이미지까지 공통으로 처리.
 app.addEventListener('click', event=>{
+  if(event.target.closest('#youtube-play-retry,[data-youtube-retry]')){
+    replayProfileYouTube();
+    return;
+  }
   const trigger=event.target.closest('[data-track-trigger]');
   if(trigger){
-    playCharacterMusic(trigger.dataset.trackTrigger,trigger.dataset.trackToggle==='true');
-    if(trigger.dataset.trackGo)location.hash=`#/character/${trigger.dataset.trackGo}`;
+    if(trigger.dataset.trackGo)navigateToCharacter(trigger.dataset.trackGo);
+    else playCharacterMusic(trigger.dataset.trackTrigger,trigger.dataset.trackToggle==='true');
     return;
   }
   // 키보드로 카드를 선택해도 음악이 나옵니다. 일반 텍스트 클릭은 이동만 합니다.

@@ -33,7 +33,7 @@
             <label class="menu-search"><span class="sr-only">캐릭터 이름 검색</span><input type="search" id="menu-search-input" placeholder="이름 또는 키워드 검색" autocomplete="off"><span aria-hidden="true">⌕</span></label>
             <div id="character-menu-list" class="character-menu-list" aria-live="polite"></div>
             <nav class="menu-page-links" aria-label="모바일 페이지 이동"><a href="#/">Home</a><a href="#/relations">Relations</a><a href="#/about">About</a></nav>
-            <div class="menu-panel-footer"><span>IMAGE CLICK → PLAY CHARACTER THEME</span><span>VOL. 01</span></div>
+            <div class="menu-panel-footer"><span>SELECT CHARACTER → PLAY THEME</span><span>VOL. 01</span></div>
           </div>
         </div>
         <button class="theme-button" id="theme-toggle" aria-label="어두운 화면으로 전환" title="화면 테마 전환"><span aria-hidden="true">◐</span></button>
@@ -42,7 +42,9 @@
     <main id="main" tabindex="-1" aria-live="polite"></main>
     <footer class="site-footer"><span>© <span id="year">2026</span> <span id="footer-credit">FOLIO. AN ORIGINAL CHARACTER ARCHIVE.</span></span><span>MADE FOR STORIES WORTH KEEPING <span class="footer-star">✳</span></span></footer>
   </div>
-  <!-- 캐릭터 간 이동해도 음악은 계속 재생됩니다. 이미지 클릭 시 첫 재생이 시작됩니다. -->
+  <!-- V7.2: single YouTube player OUTSIDE the routed <main>. Never remount it between HOME and Secrets. -->
+  <aside id="persistent-youtube" class="persistent-youtube" hidden aria-label="이어 재생되는 유튜브 테마곡"></aside>
+  <!-- 캐릭터 선택 시 테마곡 재생을 시도하며, 모바일에서는 직접 재생 버튼이 필요할 수 있습니다. -->
   <audio id="folio-audio" loop preload="none"></audio>
   <aside class="music-dock" id="music-dock" hidden aria-label="캐릭터 테마곡 플레이어">
     <div class="music-album" aria-hidden="true"><span>♫</span><i class="music-pulse"></i></div>
